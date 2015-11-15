@@ -1,0 +1,23 @@
+{
+  "name": "gitHubWebApp",
+  "version": "0.0.1",
+  "description": "Client side JavaScript Web application to retrieve information from GitHub",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Pavel <kasper.boom@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "bower": "^1.6.5",
+    "bower-webpack-plugin": "^0.1.9",
+    "css-loader": "^0.23.0",
+    "style-loader": "^0.13.0",
+    "stylus-loader": "^1.4.2",
+    "webpack": "^1.12.6"
+  },
+  "dependencies": {
+    "express": "^4.13.3"
+  }
+}

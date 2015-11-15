@@ -1,0 +1,17 @@
+{
+  "name": "gitHubWebApp",
+  "version": "0.0.1",
+  "authors": [
+    "Pavel <kasper.boom@gmail.com>"
+  ],
+  "description": "Client side JavaScript Web application to retrieve information from GitHub",
+  "main": "server.js",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
