@@ -13,6 +13,7 @@ module.exports = {
 
     module: {
         loaders: [
+            {test: /\.html$/, loader: 'raw!html-minify'},
             {test: /\.css$/, loader: 'style-loader!css-loader'},
             {test: /\.styl$/, loader: 'style-loader!css-loader!stylus-loader'}
         ],
@@ -41,9 +42,7 @@ module.exports = {
         new webpack.NoErrorsPlugin()
     ],
     stats: {
-        colors: true,
-        progress: true,
-        watch: true
+        colors: true
     },
 
     devtool: 'source-map'

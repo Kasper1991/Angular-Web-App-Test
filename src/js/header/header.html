@@ -1,0 +1,18 @@
+<md-toolbar class="md-whiteframe-z2">
+
+    <div class="md-toolbar-tools">
+
+        <md-button
+                data-ng-show="backLink"
+                data-ng-click="goBack()"
+                class="md-icon-button">
+
+            <ng-md-icon icon="keyboard_backspace" style="fill:black" aria-label="Back"></ng-md-icon>
+
+        </md-button>
+
+        <span ng-bind="title"></span>
+
+    </div>
+
+</md-toolbar>

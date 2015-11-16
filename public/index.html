@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <title></title>
 </head>
-<body>
+<body ng-app="app" layout-fill layout="column">
 
+    <app-header></app-header>
+
+    <md-content ui-view flex class="content"></md-content>
+
+    <script src="dist/app.js"></script>
 </body>
 </html>

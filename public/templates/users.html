@@ -1,0 +1,18 @@
+<md-list app-load-users="loadMoreUsers()">
+
+    <md-list-item
+            class="md-2-line"
+            ng-repeat="user in users"
+            ng-click="showUser(user)">
+
+        <img ng-src="{{::user.avatar_url}}" class="md-avatar" alt="{{::user.login}}" />
+
+        <div class="md-list-item-text" layout="column">
+            <h3>{{::user.login}}</h3>
+            <p>{{::user.email}}</p>
+        </div>
+
+    </md-list-item>
+</md-list>
+
+
