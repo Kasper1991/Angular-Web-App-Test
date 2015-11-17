@@ -11,26 +11,37 @@ header.directive('appHeader', function() {
 
         controller: ['$rootScope', '$scope', '$state', function ($rootScope, $scope, $state) {
 
-            $rootScope.$on('$stateChangeSuccess', function (ev, to, toParams, from, fromParams) {
+            $rootScope.$on('$stateChangeSuccess', function (ev, to, toParams) {
 
-                $scope.showBackLink = false;
+                $scope.title = $state.current.data.title;
 
-                $scope.title = to.title;
+                var prevStateName = $state.current.data.prevState;
 
-                if(from.name) {
+                if(!prevStateName) {
 
-                    $scope.backLink = from.name;
-                    $scope.backLinkParams = fromParams;
+                    $scope.prevState = null;
+                    $scope.prevStateParams = null;
 
                 } else {
 
-                    $scope.backLink = false;
+                    $scope.prevState = prevStateName;
+
+                    var prevState = $state.get(prevStateName),
+                        prevStateParams = prevState.data.params;
+
+                    $scope.prevStateParams = prevStateParams && prevStateParams.reduce(function(params, param) {
+
+                        params[param] = toParams[param];
+
+                        return params;
+
+                    }, {});
                 }
             });
 
             $scope.goBack = function() {
 
-                $state.go($scope.backLink, $scope.backLinkParams);
+                $state.go($scope.prevState, $scope.prevStateParams);
 
             }
         }]

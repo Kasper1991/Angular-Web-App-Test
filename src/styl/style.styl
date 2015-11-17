@@ -1,39 +1,56 @@
-.content
-  //position relative
-  padding 20px
+.header-title-container
+  text-align center
 
-  //&.ng-enter
-  //&.ng-leave
-  //  transition left 5s ease-in-out
-  //
-  //&.ng-enter
-  //  left 100%
-  //
-  //&.ng-enter-active
-  //  left 0
-  //
-  //&.ng-leave
-  //  left 0
-  //
-  //&.ng-leave-active
-  //  left 100%
+.page
+  position relative
+  width 100%
+  padding 20px 50px
 
-.user-page
+  &.ng-enter
+  &.ng-leave
+    transition left 0.5s ease-in-out
 
-  .user-avatar
-    width 70%
+  &.ng-enter
+    left 100%
 
-  .user-login
-    margin 0
+  &.ng-enter-active
+    left 0
 
-  .md-toolbar
-    padding 0 16px
+  &.ng-leave
+    left -100%
 
-  .user-page-info
+  &.ng-leave-active
+    left -200%
+
+  .user-page
+
+    .avatar
+      width 70%
+
+    .login
+      margin 0
+
+    .language
+      margin auto
+
+  .repo-page
+
+    .description
+      text-align center
+
+  .lists-container
 
     &>div
       margin-bottom 20px
 
-  .language
-    margin auto
+    .md-toolbar
+      padding 0 16px
+
+
+
+
+
+
+
+
 

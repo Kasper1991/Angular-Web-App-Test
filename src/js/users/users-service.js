@@ -13,7 +13,7 @@ module.exports = [
 
                 var self = this;
 
-                appGitHubApi.getUsers(20).then(function(users) {
+                appGitHubApi.users.part(20).then(function(users) {
 
                     users.forEach(function(user){
 
@@ -29,8 +29,8 @@ module.exports = [
 
                     .all([
 
-                        appGitHubApi.getUser(login),
-                        appGitHubApi.getRepos(login, 50)
+                        appGitHubApi.users.single(login),
+                        appGitHubApi.repos.all(login)
 
                     ]).then(function(res) {
 

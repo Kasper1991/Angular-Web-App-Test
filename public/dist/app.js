@@ -56,7 +56,7 @@
 	__webpack_require__(22);
 	__webpack_require__(27);
 	
-	__webpack_require__(29);
+	__webpack_require__(30);
 	
 	var app = angular.module('app', [
 	        'ui.router',
@@ -69,7 +69,7 @@
 	        'app.repos'
 	    ]),
 	
-	    router = __webpack_require__(31);
+	    router = __webpack_require__(32);
 	
 	app.config(router);
 	
@@ -60753,26 +60753,37 @@
 	
 	        controller: ['$rootScope', '$scope', '$state', function ($rootScope, $scope, $state) {
 	
-	            $rootScope.$on('$stateChangeSuccess', function (ev, to, toParams, from, fromParams) {
+	            $rootScope.$on('$stateChangeSuccess', function (ev, to, toParams) {
 	
-	                $scope.showBackLink = false;
+	                $scope.title = $state.current.data.title;
 	
-	                $scope.title = to.title;
+	                var prevStateName = $state.current.data.prevState;
 	
-	                if(from.name) {
+	                if(!prevStateName) {
 	
-	                    $scope.backLink = from.name;
-	                    $scope.backLinkParams = fromParams;
+	                    $scope.prevState = null;
+	                    $scope.prevStateParams = null;
 	
 	                } else {
 	
-	                    $scope.backLink = false;
+	                    $scope.prevState = prevStateName;
+	
+	                    var prevState = $state.get(prevStateName),
+	                        prevStateParams = prevState.data.params;
+	
+	                    $scope.prevStateParams = prevStateParams && prevStateParams.reduce(function(params, param) {
+	
+	                        params[param] = toParams[param];
+	
+	                        return params;
+	
+	                    }, {});
 	                }
 	            });
 	
 	            $scope.goBack = function() {
 	
-	                $state.go($scope.backLink, $scope.backLinkParams);
+	                $state.go($scope.prevState, $scope.prevStateParams);
 	
 	            }
 	        }]
@@ -60785,7 +60796,7 @@
 /* 20 */
 /***/ function(module, exports) {
 
-	module.exports = "<md-toolbar class=md-whiteframe-z2><div class=md-toolbar-tools><md-button data-ng-show=backLink data-ng-click=goBack() class=md-icon-button><ng-md-icon icon=keyboard_backspace style=fill:black aria-label=Back></ng-md-icon></md-button><span ng-bind=title></span></div></md-toolbar>"
+	module.exports = "<md-toolbar class=md-whiteframe-z2 id=header><div class=md-toolbar-tools layout><md-button data-ng-show=prevState data-ng-click=goBack() class=md-icon-button><ng-md-icon icon=arrow_back aria-label=Back></ng-md-icon></md-button><div flex class=header-title-container><span ng-bind=title></span></div></div></md-toolbar>"
 
 /***/ },
 /* 21 */
@@ -60800,9 +60811,7 @@
 	
 	    function($http, API_URI){
 	
-	        var linkHeaders = {},
-	
-	            parseLinkHeader = function(linkHeader) {
+	        var parseLinkHeader = function(linkHeader) {
 	
 	                return linkHeader.split(',').reduce(function(links, part){
 	
@@ -60815,57 +60824,101 @@
 	                }, {});
 	            },
 	
-	            request = function(type, url) {
+	            request = function(url, cb) {
 	
 	                return $http.get(url).then(function(res) {
 	
-	                    var linkHeader = res.headers().link;
+	                    var linkHeader = res.headers().link,
 	
-	                    if(linkHeader) linkHeaders[type] = parseLinkHeader(linkHeader);
+	                        data = res.data;
 	
-	                    return res.data;
+	                    if(linkHeader && cb) cb(parseLinkHeader(linkHeader));
+	
+	                    return data;
 	                });
 	            },
 	
-	            getNextLinkHeaders = function(type) {
+	            recursiveRequest = function(url, fullData){
 	
-	                return linkHeaders[type] && linkHeaders[type].next;
+	                fullData || (fullData = []);
 	
+	                var currLinks = {};
+	
+	                return request(url, function(links) {
+	
+	                    currLinks = links;
+	
+	                }).then(function(data) {
+	
+	                    fullData = fullData.concat(data);
+	
+	                    return currLinks.next ? recursiveRequest(currLinks.next, fullData) : fullData;
+	
+	                });
 	            };
 	
 	        return {
 	
-	            getUsers: function(perPage) {
+	            users: {
 	
-	                var url = getNextLinkHeaders('users') || (API_URI + 'users?per_page=' + perPage);
+	                links: {},
 	
-	                return request('users', url);
+	                part: function(perPage) {
+	
+	                    var url = this.links.next || (API_URI + 'users?per_page=' + perPage);
+	
+	                    return request(url, function(links) {
+	
+	                        this.links = links;
+	
+	                    }.bind(this));
+	                },
+	
+	                single: function(login) {
+	
+	                    var url = API_URI + 'users/' + login;
+	
+	                    return request(url);
+	                }
 	            },
 	
-	            getUser: function(login) {
+	            repos: {
 	
-	                var url = API_URI + 'users/' + login;
+	                all: function(login) {
 	
-	                return request('user', url);
+	                    var url = API_URI + 'users/' + login + '/repos';
+	
+	                    return recursiveRequest(url);
+	                },
+	
+	                single: function(login, name) {
+	
+	                    var url = API_URI + 'repos/' + login + '/' + name;
+	
+	                    return request(url);
+	
+	                }
 	            },
 	
-	            getRepos: function(login, perPage, repos) {
+	            branches: {
 	
-	                repos || (repos = []);
+	                all: function(login, name) {
 	
-	                var url = getNextLinkHeaders('repos') || (API_URI + 'users/' + login + '/repos?per_page=' + perPage),
+	                    var url = API_URI + 'repos/' + login + '/' + name + '/branches';
 	
-	                    self = this;
+	                    return recursiveRequest(url);
 	
-	                return request('repos', url).then(function(newRepos) {
+	                }
+	            },
 	
-	                    repos = repos.concat(newRepos);
+	            commits: {
 	
-	                    if(getNextLinkHeaders('repos')) return self.getRepos(login, perPage, repos);
+	                all: function(login, name) {
 	
-	                    return repos;
+	                    var url = API_URI + 'repos/' + login + '/' + name + '/commits';
 	
-	                });
+	                    return recursiveRequest(url);
+	                }
 	            }
 	        };
 	    }
@@ -60925,10 +60978,11 @@
 	module.exports = [
 	
 	    '$scope',
+	    '$state',
 	    '$stateParams',
 	    'appUsers',
 	
-	    function($scope, $stateParams, appUsers) {
+	    function($scope, $state, $stateParams, appUsers) {
 	
 	        var login = $stateParams.login;
 	
@@ -60937,6 +60991,16 @@
 	            $scope.user = user;
 	
 	        });
+	
+	        $scope.showRepo = function(repo) {
+	
+	            $state.go('repo', {
+	
+	                login: login,
+	                repo: repo.name
+	
+	            });
+	        };
 	    }
 	];
 
@@ -60960,7 +61024,7 @@
 	
 	                var self = this;
 	
-	                appGitHubApi.getUsers(20).then(function(users) {
+	                appGitHubApi.users.part(20).then(function(users) {
 	
 	                    users.forEach(function(user){
 	
@@ -60976,8 +61040,8 @@
 	
 	                    .all([
 	
-	                        appGitHubApi.getUser(login),
-	                        appGitHubApi.getRepos(login, 50)
+	                        appGitHubApi.users.single(login),
+	                        appGitHubApi.repos.all(login)
 	
 	                    ]).then(function(res) {
 	
@@ -61035,7 +61099,8 @@
 
 	var repos = angular.module('app.repos', []);
 	
-	repos.factory('appRepos', __webpack_require__(28));
+	repos.controller('RepoController', __webpack_require__(28));
+	repos.factory('appRepos', __webpack_require__(29));
 	
 	module.exports = repos;
 
@@ -61045,25 +61110,73 @@
 
 	module.exports = [
 	
-	    'appGitHubApi',
+	    '$scope',
+	    '$state',
+	    '$stateParams',
+	    'appRepos',
 	
-	    function(appGitHubApi) {
+	    function($scope, $state, $stateParams,  appRepos) {
 	
-	        return {
+	        var login = $stateParams.login,
 	
-	        }
+	            name = $stateParams.repo;
+	
+	        appRepos.getRepo(login, name).then(function(repo) {
+	
+	            $scope.repo = repo;
+	
+	        });
 	    }
 	];
 
 
 /***/ },
 /* 29 */
+/***/ function(module, exports) {
+
+	module.exports = [
+	
+	    'appGitHubApi',
+	    '$q',
+	
+	    function(appGitHubApi, $q) {
+	
+	        return {
+	
+	            getRepo: function(login, name) {
+	
+	                return $q
+	
+	                    .all([
+	
+	                        appGitHubApi.repos.single(login, name),
+	                        appGitHubApi.branches.all(login, name)
+	
+	                    ])
+	
+	                    .then(function(res) {
+	
+	                        var repo = res[0], branches = res[1];
+	
+	                        repo.branches = branches;
+	
+	                        return repo;
+	
+	                    });
+	            }
+	        }
+	    }
+	];
+
+
+/***/ },
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 	
 	// load the styles
-	var content = __webpack_require__(30);
+	var content = __webpack_require__(31);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
 	var update = __webpack_require__(14)(content, {});
@@ -61083,7 +61196,7 @@
 	}
 
 /***/ },
-/* 30 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
 	exports = module.exports = __webpack_require__(13)();
@@ -61091,13 +61204,13 @@
 	
 	
 	// module
-	exports.push([module.id, ".content {\n  padding: 20px;\n}\n.user-page .user-avatar {\n  width: 70%;\n}\n.user-page .user-login {\n  margin: 0;\n}\n.user-page .md-toolbar {\n  padding: 0 16px;\n}\n.user-page .user-page-info>div {\n  margin-bottom: 20px;\n}\n.user-page .language {\n  margin: auto;\n}\n", ""]);
+	exports.push([module.id, ".header-title-container {\n  text-align: center;\n}\n.page {\n  position: relative;\n  width: 100%;\n  padding: 20px 50px;\n}\n.page.ng-enter,\n.page.ng-leave {\n  transition: left 0.5s ease-in-out;\n}\n.page.ng-enter {\n  left: 100%;\n}\n.page.ng-enter-active {\n  left: 0;\n}\n.page.ng-leave {\n  left: -100%;\n}\n.page.ng-leave-active {\n  left: -200%;\n}\n.page .user-page .avatar {\n  width: 70%;\n}\n.page .user-page .login {\n  margin: 0;\n}\n.page .user-page .language {\n  margin: auto;\n}\n.page .repo-page .description {\n  text-align: center;\n}\n.page .lists-container>div {\n  margin-bottom: 20px;\n}\n.page .lists-container .md-toolbar {\n  padding: 0 16px;\n}\n", ""]);
 	
 	// exports
 
 
 /***/ },
-/* 31 */
+/* 32 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -61107,23 +61220,52 @@
 	
 	    function($stateProvider, $urlRouterProvider) {
 	
-	        $urlRouterProvider.otherwise('/users');
+	        $urlRouterProvider.otherwise('/');
 	
 	        $stateProvider
 	
 	            .state('users', {
-	                url: '/users',
+	                url: '/',
 	                templateUrl: 'templates/users.html',
 	                controller: 'UsersController',
-	                title: 'List of users'
+	                data: {
+	                    title: 'Users'
+	                }
 	            })
 	
 	            .state('user', {
-	                url: '/users/:login',
+	                url: '/:login',
 	                templateUrl: 'templates/user.html',
 	                controller: 'UserController',
-	                title: 'User profile'
+	                data: {
+	                    title: 'Profile',
+	                    prevState: 'users',
+	                    params: ['login']
+	                }
 	            })
+	
+	            .state('repo', {
+	                url: '/:login/:repo',
+	                templateUrl: 'templates/repo.html',
+	                controller: 'RepoController',
+	                data: {
+	                    title: 'Repository',
+	                    prevState: 'user',
+	                    params: ['login', 'repo']
+	                }
+	            })
+	
+	            .state('commits', {
+	                url: '/:login/:repo/commits',
+	                templateUrl: 'templates/commits.html',
+	                controller: 'CommitsController',
+	                data: {
+	                    title: 'Commits',
+	                    prevState: 'repo',
+	                    params: ['login', 'repo']
+	                }
+	            })
+	
 	
 	    }
 	];

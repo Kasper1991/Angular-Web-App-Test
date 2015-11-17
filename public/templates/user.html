@@ -1,26 +1,30 @@
 <div flex layout class="user-page">
 
-    <div flex="33" layout="column" layout-align="start center">
-        <img ng-src="{{::user.avatar_url}}" class="user-avatar md-whiteframe-z3" alt="{{::user.login}}">
+    <div flex="30" layout="column" layout-align="start center">
+
+        <img ng-src="{{::user.avatar_url}}" class="avatar md-whiteframe-z4" alt="{{::user.login}}">
+
         <h3>{{::user.name}}</h3>
-        <p class="user-login">{{::user.login}}</p>
+
+        <p class="login">{{::user.login}}</p>
+
     </div>
 
-    <div flex="66" layout="column" class="user-page-info">
+    <div flex="70" layout="column" class="lists-container">
 
         <div class="md-whiteframe-z2" layout="column" ng-if="user.location || user.email || user.blog">
 
             <md-toolbar>
                 <div class="md-toolbar">
-                    <h3>Contact information</h3>
+                    <h3>Contacts</h3>
                 </div>
             </md-toolbar>
 
             <md-list>
+
                 <md-list-item ng-if="user.location">
                     <ng-md-icon icon="location_on"></ng-md-icon>
                     <p>{{::user.location}}</p>
-                    <md-divider></md-divider>
                 </md-list-item>
 
                 <md-list-item ng-if="user.email">
@@ -28,7 +32,6 @@
                     <p>
                         <a ng-href="mailto:{{::user.email}}" target="_blank">{{::user.email}}</a>
                     </p>
-                    <md-divider></md-divider>
                 </md-list-item>
 
                 <md-list-item ng-if="user.blog">
@@ -37,21 +40,25 @@
                         <a ng-href="{{::user.blog}}" target="_blank">{{::user.blog}}</a>
                     </p>
                 </md-list-item>
+
             </md-list>
         </div>
 
         <div class="md-whiteframe-z2" layout="column" ng-if="user.repos.length > 0">
 
             <md-toolbar>
-                <div class="md-toolbar">
-                    <h3>Repositories ({{::user.repos.length}})</h3>
+                <div class="md-toolbar" layout>
+                    <h3 flex>Repositories</h3>
+                    <h3>{{::user.repos.length}}</h3>
                 </div>
             </md-toolbar>
 
             <md-list>
+
                 <md-list-item
                         class="md-2-line"
-                        ng-repeat="repo in user.repos">
+                        ng-repeat="repo in user.repos"
+                        ng-click="showRepo(repo)">
 
                     <div class="md-list-item-text">
                         <h3>{{::repo.name}}</h3>
@@ -61,7 +68,9 @@
                     <div class="language">{{::repo.language}}</div>
 
                     <md-divider></md-divider>
+
                 </md-list-item>
+
             </md-list>
         </div>
     </div>

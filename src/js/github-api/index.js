@@ -7,9 +7,7 @@ gitHubApi.factory('appGitHubApi', [
 
     function($http, API_URI){
 
-        var linkHeaders = {},
-
-            parseLinkHeader = function(linkHeader) {
+        var parseLinkHeader = function(linkHeader) {
 
                 return linkHeader.split(',').reduce(function(links, part){
 
@@ -22,57 +20,101 @@ gitHubApi.factory('appGitHubApi', [
                 }, {});
             },
 
-            request = function(type, url) {
+            request = function(url, cb) {
 
                 return $http.get(url).then(function(res) {
 
-                    var linkHeader = res.headers().link;
+                    var linkHeader = res.headers().link,
 
-                    if(linkHeader) linkHeaders[type] = parseLinkHeader(linkHeader);
+                        data = res.data;
 
-                    return res.data;
+                    if(linkHeader && cb) cb(parseLinkHeader(linkHeader));
+
+                    return data;
                 });
             },
 
-            getNextLinkHeaders = function(type) {
+            recursiveRequest = function(url, fullData){
 
-                return linkHeaders[type] && linkHeaders[type].next;
+                fullData || (fullData = []);
 
+                var currLinks = {};
+
+                return request(url, function(links) {
+
+                    currLinks = links;
+
+                }).then(function(data) {
+
+                    fullData = fullData.concat(data);
+
+                    return currLinks.next ? recursiveRequest(currLinks.next, fullData) : fullData;
+
+                });
             };
 
         return {
 
-            getUsers: function(perPage) {
+            users: {
 
-                var url = getNextLinkHeaders('users') || (API_URI + 'users?per_page=' + perPage);
+                links: {},
 
-                return request('users', url);
+                part: function(perPage) {
+
+                    var url = this.links.next || (API_URI + 'users?per_page=' + perPage);
+
+                    return request(url, function(links) {
+
+                        this.links = links;
+
+                    }.bind(this));
+                },
+
+                single: function(login) {
+
+                    var url = API_URI + 'users/' + login;
+
+                    return request(url);
+                }
             },
 
-            getUser: function(login) {
+            repos: {
 
-                var url = API_URI + 'users/' + login;
+                all: function(login) {
 
-                return request('user', url);
+                    var url = API_URI + 'users/' + login + '/repos';
+
+                    return recursiveRequest(url);
+                },
+
+                single: function(login, name) {
+
+                    var url = API_URI + 'repos/' + login + '/' + name;
+
+                    return request(url);
+
+                }
             },
 
-            getRepos: function(login, perPage, repos) {
+            branches: {
 
-                repos || (repos = []);
+                all: function(login, name) {
 
-                var url = getNextLinkHeaders('repos') || (API_URI + 'users/' + login + '/repos?per_page=' + perPage),
+                    var url = API_URI + 'repos/' + login + '/' + name + '/branches';
 
-                    self = this;
+                    return recursiveRequest(url);
 
-                return request('repos', url).then(function(newRepos) {
+                }
+            },
 
-                    repos = repos.concat(newRepos);
+            commits: {
 
-                    if(getNextLinkHeaders('repos')) return self.getRepos(login, perPage, repos);
+                all: function(login, name) {
 
-                    return repos;
+                    var url = API_URI + 'repos/' + login + '/' + name + '/commits';
 
-                });
+                    return recursiveRequest(url);
+                }
             }
         };
     }

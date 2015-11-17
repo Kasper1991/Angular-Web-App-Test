@@ -1,18 +1,21 @@
-<md-toolbar class="md-whiteframe-z2">
+<md-toolbar class="md-whiteframe-z2" id="header">
 
-    <div class="md-toolbar-tools">
+    <div class="md-toolbar-tools" layout>
 
         <md-button
-                data-ng-show="backLink"
+                data-ng-show="prevState"
                 data-ng-click="goBack()"
                 class="md-icon-button">
 
-            <ng-md-icon icon="keyboard_backspace" style="fill:black" aria-label="Back"></ng-md-icon>
+            <ng-md-icon icon="arrow_back" aria-label="Back"></ng-md-icon>
 
         </md-button>
 
-        <span ng-bind="title"></span>
+        <div flex class="header-title-container">
 
+            <span ng-bind="title"></span>
+
+        </div>
     </div>
 
 </md-toolbar>
