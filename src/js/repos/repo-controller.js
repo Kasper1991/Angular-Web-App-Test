@@ -8,13 +8,21 @@ module.exports = [
     function($scope, $state, $stateParams,  appRepos) {
 
         var login = $stateParams.login,
+            repo = $stateParams.repo;
 
-            name = $stateParams.repo;
-
-        appRepos.getRepo(login, name).then(function(repo) {
+        appRepos.getRepo(login, repo).then(function(repo) {
 
             $scope.repo = repo;
 
         });
+
+        $scope.showCommits = function() {
+
+            $state.go('commits', {
+                login: login,
+                repo: repo
+            });
+
+        }
     }
 ];

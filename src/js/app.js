@@ -7,8 +7,10 @@ require('angular-material-icons');
 
 require('./header');
 require('./github-api');
+require('./partial-loading');
 require('./users');
 require('./repos');
+require('./commits');
 
 require('../styl/style.styl');
 
@@ -19,12 +21,16 @@ var app = angular.module('app', [
         'ngMdIcons',
         'app.header',
         'app.gitHubApi',
+        'app.partialLoading',
         'app.users',
-        'app.repos'
+        'app.repos',
+        'app.commits'
     ]),
 
-    router = require('./router');
+    router = require('./router'),
+
+    apiConfig = require('./api-config');
 
 app.config(router);
 
-app.constant('API_URI', 'https://api.github.com/');
+app.config(apiConfig);

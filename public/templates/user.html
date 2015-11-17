@@ -44,12 +44,14 @@
             </md-list>
         </div>
 
-        <div class="md-whiteframe-z2" layout="column" ng-if="user.repos.length > 0">
+        <div class="loading" ng-if="!repos.length"></div>
+
+        <div class="md-whiteframe-z2 repos-list-container" layout="column" ng-if="repos.length > 0">
 
             <md-toolbar>
                 <div class="md-toolbar" layout>
                     <h3 flex>Repositories</h3>
-                    <h3>{{::user.repos.length}}</h3>
+                    <h3>{{::repos.length}}</h3>
                 </div>
             </md-toolbar>
 
@@ -57,7 +59,7 @@
 
                 <md-list-item
                         class="md-2-line"
-                        ng-repeat="repo in user.repos"
+                        ng-repeat="repo in repos"
                         ng-click="showRepo(repo)">
 
                     <div class="md-list-item-text">
@@ -72,6 +74,7 @@
                 </md-list-item>
 
             </md-list>
+
         </div>
     </div>
 </div>

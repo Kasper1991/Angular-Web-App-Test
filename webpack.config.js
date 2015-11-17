@@ -15,7 +15,7 @@ module.exports = {
         loaders: [
             {test: /\.html$/, loader: 'raw!html-minify'},
             {test: /\.css$/, loader: 'style-loader!css-loader'},
-            {test: /\.styl$/, loader: 'style-loader!css-loader!stylus-loader'}
+            {test: /\.styl$/, loader: 'style-loader!css-loader!autoprefixer-loader!stylus-loader'}
         ],
         resolve: {
             extensions: ['', '.js', '.styl', '.css', '.html', 'json']
@@ -32,11 +32,6 @@ module.exports = {
             searchResolveModulesDirectories: true
         }),
 
-        //new webpack.optimize.UglifyJsPlugin({
-        //    'compress': {
-        //        'warnings': false
-        //    }
-        //}),
         new webpack.optimize.DedupePlugin(),
 
         new webpack.NoErrorsPlugin()

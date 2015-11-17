@@ -52,11 +52,13 @@
 	__webpack_require__(15);
 	
 	__webpack_require__(19);
-	__webpack_require__(21);
-	__webpack_require__(22);
+	__webpack_require__(23);
 	__webpack_require__(27);
+	__webpack_require__(29);
+	__webpack_require__(33);
+	__webpack_require__(36);
 	
-	__webpack_require__(30);
+	__webpack_require__(39);
 	
 	var app = angular.module('app', [
 	        'ui.router',
@@ -65,16 +67,19 @@
 	        'ngMdIcons',
 	        'app.header',
 	        'app.gitHubApi',
+	        'app.partialLoading',
 	        'app.users',
-	        'app.repos'
+	        'app.repos',
+	        'app.commits'
 	    ]),
 	
-	    router = __webpack_require__(32);
+	    router = __webpack_require__(41),
+	
+	    apiConfig = __webpack_require__(42);
 	
 	app.config(router);
 	
-	app.constant('API_URI', 'https://api.github.com/');
-
+	app.config(apiConfig);
 
 /***/ },
 /* 1 */
@@ -60742,89 +60747,181 @@
 
 	var header = angular.module('app.header', []);
 	
-	header.directive('appHeader', function() {
+	header.directive('appHeader', __webpack_require__(20));
+	
+	header.factory('appHeader', __webpack_require__(22));
+	
+	module.exports = header;
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function() {
 	
 	    return {
 	
 	        scope: {},
 	        restrict: 'E',
 	        transclude: false,
-	        template: __webpack_require__(20),
+	        template: __webpack_require__(21),
 	
-	        controller: ['$rootScope', '$scope', '$state', function ($rootScope, $scope, $state) {
+	        controller: ['$scope', 'appHeader', function ($scope, appHeader) {
 	
-	            $rootScope.$on('$stateChangeSuccess', function (ev, to, toParams) {
+	            $scope.header = appHeader;
 	
-	                $scope.title = $state.current.data.title;
-	
-	                var prevStateName = $state.current.data.prevState;
-	
-	                if(!prevStateName) {
-	
-	                    $scope.prevState = null;
-	                    $scope.prevStateParams = null;
-	
-	                } else {
-	
-	                    $scope.prevState = prevStateName;
-	
-	                    var prevState = $state.get(prevStateName),
-	                        prevStateParams = prevState.data.params;
-	
-	                    $scope.prevStateParams = prevStateParams && prevStateParams.reduce(function(params, param) {
-	
-	                        params[param] = toParams[param];
-	
-	                        return params;
-	
-	                    }, {});
-	                }
-	            });
-	
-	            $scope.goBack = function() {
-	
-	                $state.go($scope.prevState, $scope.prevStateParams);
-	
-	            }
 	        }]
 	    }
-	});
-	
-	module.exports = header;
-
-/***/ },
-/* 20 */
-/***/ function(module, exports) {
-
-	module.exports = "<md-toolbar class=md-whiteframe-z2 id=header><div class=md-toolbar-tools layout><md-button data-ng-show=prevState data-ng-click=goBack() class=md-icon-button><ng-md-icon icon=arrow_back aria-label=Back></ng-md-icon></md-button><div flex class=header-title-container><span ng-bind=title></span></div></div></md-toolbar>"
+	}
 
 /***/ },
 /* 21 */
 /***/ function(module, exports) {
 
-	var gitHubApi = angular.module('app.gitHubApi', []);
+	module.exports = "<md-toolbar class=md-whiteframe-z2 id=header><div class=md-toolbar-tools layout><md-button data-ng-show=header.navigation.prev data-ng-click=header.goBack() class=md-icon-button><ng-md-icon icon=arrow_back aria-label=Back></ng-md-icon></md-button><div flex class=header-title-container><span ng-bind=header.title></span></div></div></md-toolbar>"
+
+/***/ },
+/* 22 */
+/***/ function(module, exports) {
+
+	module.exports = [
 	
-	gitHubApi.factory('appGitHubApi', [
+	    '$rootScope',
+	    '$state',
 	
-	    '$http',
-	    'API_URI',
+	    function($rootScope, $state) {
 	
-	    function($http, API_URI){
+	        var header =  {
+	                title: '',
+	                navigation: {},
+	                goBack: function() {
 	
-	        var parseLinkHeader = function(linkHeader) {
+	                    $state.go(this.navigation.prev, this.navigation.params)
 	
-	                return linkHeader.split(',').reduce(function(links, part){
+	                }
+	            },
 	
-	                    var link = part.split(';'),
-	                        url = link[0].replace(/<(.*)>/, '$1').trim(),
-	                        name = link[1].replace(/rel="(.*)"/, '$1').trim();
+	            getParamsForPrevState = function(list, toParams) {
 	
-	                    links[name] = url; return links;
+	                return list.reduce(function(params, param) {
+	
+	                    params[param] = toParams[param];
+	
+	                    return params;
 	
 	                }, {});
 	            },
 	
-	            request = function(url, cb) {
+	            changeStateHandler = function(e, to, toParams) {
+	
+	                var currStateData = $state.current.data,
+	                    prevStateName = currStateData.prevState;
+	
+	                header.title = currStateData.title;
+	
+	                if(!prevStateName) return header.navigation = {};
+	
+	                header.navigation.prev = prevStateName;
+	
+	                var prevState = $state.get(prevStateName),
+	                    prevStateParams = prevState.data.params;
+	
+	                header.navigation.params = prevStateParams && getParamsForPrevState(prevStateParams, toParams);
+	            };
+	
+	        $rootScope.$on('$stateChangeSuccess', changeStateHandler);
+	
+	        return header;
+	    }
+	];
+
+
+/***/ },
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var gitHubApi = angular.module('app.gitHubApi', []);
+	
+	gitHubApi.config([
+	
+	    '$httpProvider',
+	
+	    function($httpProvider) {
+	
+	        $httpProvider.interceptors.push('gitHubApiErrorHandler');
+	    }
+	]);
+	
+	gitHubApi.factory('gitHubApiErrorHandler', __webpack_require__(24));
+	
+	gitHubApi.factory('gitHubApiRequests', __webpack_require__(25));
+	
+	gitHubApi.provider('appGitHubApi', __webpack_require__(26));
+	
+	module.exports = gitHubApi;
+
+
+/***/ },
+/* 24 */
+/***/ function(module, exports) {
+
+	module.exports = [
+	
+	    function() {
+	
+	        return {
+	
+	            responseError: function(err) {
+	
+	                var headers = err.headers();
+	
+	                if(headers['x-ratelimit-remaining'] == 0) {
+	
+	                    var resetTime = new Date(headers['x-ratelimit-reset'] * 1000),
+	
+	                        now = (new Date).getTime(),
+	
+	                        remaining = (resetTime - now) / 1000 / 60;
+	
+	                    err.data = [];
+	
+	                    alert('API rate limit exceeded, try after ' + remaining.toFixed() + ' min');
+	                }
+	
+	                return err;
+	            }
+	        };
+	    }
+	];
+
+
+/***/ },
+/* 25 */
+/***/ function(module, exports) {
+
+	module.exports = [
+	
+	    '$http',
+	    '$q',
+	
+	    function($http, $q) {
+	
+	        var parseLinkHeader = function(linkHeader) {
+	
+	            return linkHeader.split(',').reduce(function(links, part){
+	
+	                var link = part.split(';'),
+	                    url = link[0].replace(/<(.*)>/, '$1').trim(),
+	                    name = link[1].replace(/rel="(.*)"/, '$1').trim();
+	
+	                links[name] = url; return links;
+	
+	            }, {});
+	        };
+	
+	        return {
+	
+	            request: function(url, cb) {
 	
 	                return $http.get(url).then(function(res) {
 	
@@ -60838,110 +60935,288 @@
 	                });
 	            },
 	
-	            recursiveRequest = function(url, fullData){
+	            recursiveRequest: function(cb){
 	
-	                fullData || (fullData = []);
+	                var self = this,
+	                    currLinks = {};
 	
-	                var currLinks = {};
+	                return function() {
 	
-	                return request(url, function(links) {
+	                    var firstUrl = cb.apply(null, arguments),
+	                        fullData = [],
 	
-	                    currLinks = links;
+	                        loop = function(url) {
 	
-	                }).then(function(data) {
+	                            return self.request(url, function(links) {
 	
-	                    fullData = fullData.concat(data);
+	                                currLinks = links;
 	
-	                    return currLinks.next ? recursiveRequest(currLinks.next, fullData) : fullData;
+	                            }).then(function(data) {
 	
-	                });
-	            };
+	                                fullData = fullData.concat(data);
 	
-	        return {
+	                                return currLinks.next ? loop(currLinks.next) : fullData;
 	
-	            users: {
+	                            })
+	                        };
 	
-	                links: {},
-	
-	                part: function(perPage) {
-	
-	                    var url = this.links.next || (API_URI + 'users?per_page=' + perPage);
-	
-	                    return request(url, function(links) {
-	
-	                        this.links = links;
-	
-	                    }.bind(this));
-	                },
-	
-	                single: function(login) {
-	
-	                    var url = API_URI + 'users/' + login;
-	
-	                    return request(url);
-	                }
+	                    return loop(firstUrl);
+	                };
 	            },
 	
-	            repos: {
+	            partialRequest: function(cb) {
 	
-	                all: function(login) {
+	                var self = this,
+	                    currLinks = {},
+	                    firstLoading = true;
 	
-	                    var url = API_URI + 'users/' + login + '/repos';
+	                return function() {
 	
-	                    return recursiveRequest(url);
-	                },
+	                    var firstUrl = cb.apply(null, arguments),
 	
-	                single: function(login, name) {
+	                        getPart = function(url) {
 	
-	                    var url = API_URI + 'repos/' + login + '/' + name;
+	                            firstLoading = false;
 	
-	                    return request(url);
+	                            return self.request(url, function(links) {
 	
-	                }
-	            },
+	                                currLinks = links;
 	
-	            branches: {
+	                            })
+	                        };
 	
-	                all: function(login, name) {
+	                    if(currLinks.next) return getPart(currLinks.next);
 	
-	                    var url = API_URI + 'repos/' + login + '/' + name + '/branches';
+	                    if(firstLoading) return getPart(firstUrl);
 	
-	                    return recursiveRequest(url);
+	                    return $q(function(resolve) {
 	
-	                }
-	            },
+	                        firstLoading = true;
 	
-	            commits: {
-	
-	                all: function(login, name) {
-	
-	                    var url = API_URI + 'repos/' + login + '/' + name + '/commits';
-	
-	                    return recursiveRequest(url);
+	                        resolve(false);
+	                    });
 	                }
 	            }
-	        };
-	    }
-	]);
+	        }
 	
-	module.exports = gitHubApi;
+	    }
+	];
 
 
 /***/ },
-/* 22 */
+/* 26 */
+/***/ function(module, exports) {
+
+	module.exports = function(){
+	
+	    var API_URI = 'https://api.github.com/',
+	
+	        pagination = {
+	            users: 100,
+	            repos: 100,
+	            commits: 100,
+	            branches: 100
+	        };
+	
+	    this.setApiUri = function(uri) {
+	
+	        API_URI = uri;
+	
+	    };
+	
+	    this.setPagination = function(params) {
+	
+	        angular.extend(pagination, params);
+	
+	    };
+	
+	    this.$get = [
+	
+	        'gitHubApiRequests',
+	
+	        function(gitHubApiRequests) {
+	
+	            return {
+	
+	                users: {
+	
+	                    part: gitHubApiRequests.partialRequest(function() {
+	
+	                        return API_URI + 'users?per_page=' + pagination.users;
+	
+	                    }),
+	
+	                    single: function(login) {
+	
+	                        var url = API_URI + 'users/' + login;
+	
+	                        return gitHubApiRequests.request(url);
+	                    }
+	                },
+	
+	                repos: {
+	
+	                    all: gitHubApiRequests.recursiveRequest(function(login) {
+	
+	                        return API_URI + 'users/' + login + '/repos?per_page=' + pagination.repos;
+	
+	                    }),
+	
+	                    single: function(login, repo) {
+	
+	                        var url = API_URI + 'repos/' + login + '/' + repo;
+	
+	                        return gitHubApiRequests.request(url);
+	
+	                    }
+	                },
+	
+	                branches: {
+	
+	                    all: gitHubApiRequests.recursiveRequest(function(login, repo) {
+	
+	                        return  API_URI + 'repos/' + login + '/' + repo + '/branches?per_page=' + pagination.branches;
+	
+	                    })
+	                },
+	
+	                commits: {
+	
+	                    part: gitHubApiRequests.partialRequest(function(login, repo) {
+	
+	                        return API_URI + 'repos/' + login + '/' + repo + '/commits?per_page=' + pagination.commits;
+	
+	                    })
+	                }
+	            }
+	        }
+	    ]
+	};
+
+
+/***/ },
+/* 27 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(module) {var partialLoading = angular.module('app.partialLoading', []);
+	
+	partialLoading.directive('appPartialLoading', [
+	
+	    '$document',
+	
+	    function($document) {
+	
+	        return {
+	
+	            restrict: 'A',
+	
+	            link: function(scope, elem, attr) {
+	
+	                var content = $document[0].getElementById('content');
+	
+	                if(!content) throw Error('content element not found');
+	
+	                content.addEventListener('scroll', function() {
+	
+	                    if(content.scrollTop + content.offsetHeight >= content.scrollHeight) {
+	
+	                        scope.$apply(attr.appPartialLoading);
+	
+	                    }
+	                });
+	            }
+	        }
+	    }
+	]);
+	
+	module.export = partialLoading;
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(28)(module)))
+
+/***/ },
+/* 28 */
+/***/ function(module, exports) {
+
+	module.exports = function(module) {
+		if(!module.webpackPolyfill) {
+			module.deprecate = function() {};
+			module.paths = [];
+			// module.parent = undefined by default
+			module.children = [];
+			module.webpackPolyfill = 1;
+		}
+		return module;
+	}
+
+
+/***/ },
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var users = angular.module('app.users', []);
 	
-	users.controller('UsersController', __webpack_require__(23));
-	users.controller('UserController', __webpack_require__(24));
-	users.factory('appUsers', __webpack_require__(25));
-	users.directive('appLoadUsers', __webpack_require__(26));
+	users.factory('appUsers', __webpack_require__(30));
+	
+	users.controller('UsersController', __webpack_require__(31));
+	users.controller('UserController', __webpack_require__(32));
 	
 	module.exports = users;
 
 /***/ },
-/* 23 */
+/* 30 */
+/***/ function(module, exports) {
+
+	module.exports = [
+	
+	    '$q',
+	    'appGitHubApi',
+	
+	    function($q, appGitHubApi) {
+	
+	        var service = {
+	
+	                users: [],
+	
+	                getUsers: function() {
+	
+	                    var self = this;
+	
+	                    appGitHubApi.users.part(50).then(function(users) {
+	
+	                        users.forEach(function(user){
+	
+	                            self.users.push({
+	                                login: user.login,
+	                                avatar_url: user.avatar_url
+	                            });
+	                        });
+	                    })
+	                },
+	
+	                getUser: function(login) {
+	
+	                    return appGitHubApi.users.single(login).then(function(user) {
+	
+	                        return {
+	                            avatar_url: user.avatar_url,
+	                            login: user.login,
+	                            name: user.name,
+	                            location: user.location,
+	                            email: user.email,
+	                            blog: user.blog
+	                        }
+	                    })
+	                }
+	            };
+	
+	        service.getUsers();
+	
+	        return service;
+	    }
+	];
+
+/***/ },
+/* 31 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -60972,7 +61247,7 @@
 
 
 /***/ },
-/* 24 */
+/* 32 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -60981,8 +61256,9 @@
 	    '$state',
 	    '$stateParams',
 	    'appUsers',
+	    'appRepos',
 	
-	    function($scope, $state, $stateParams, appUsers) {
+	    function($scope, $state, $stateParams, appUsers, appRepos) {
 	
 	        var login = $stateParams.login;
 	
@@ -60992,13 +61268,17 @@
 	
 	        });
 	
+	        appRepos.getRepos(login).then(function(repos) {
+	
+	            $scope.repos = repos;
+	
+	        });
+	
 	        $scope.showRepo = function(repo) {
 	
 	            $state.go('repo', {
-	
 	                login: login,
 	                repo: repo.name
-	
 	            });
 	        };
 	    }
@@ -61006,106 +61286,18 @@
 
 
 /***/ },
-/* 25 */
-/***/ function(module, exports) {
-
-	module.exports = [
-	
-	    '$q',
-	    'appGitHubApi',
-	
-	    function($q, appGitHubApi) {
-	
-	        var service = {
-	
-	            users: [],
-	
-	            getUsers: function() {
-	
-	                var self = this;
-	
-	                appGitHubApi.users.part(20).then(function(users) {
-	
-	                    users.forEach(function(user){
-	
-	                        self.users.push(user);
-	
-	                    });
-	                })
-	            },
-	
-	            getUser: function(login) {
-	
-	                return $q
-	
-	                    .all([
-	
-	                        appGitHubApi.users.single(login),
-	                        appGitHubApi.repos.all(login)
-	
-	                    ]).then(function(res) {
-	
-	                        var user = res[0], repos = res[1];
-	
-	                        user.repos = repos;
-	
-	                        return user;
-	                    });
-	            }
-	        };
-	
-	        service.getUsers();
-	
-	        return service;
-	    }
-	];
-
-/***/ },
-/* 26 */
-/***/ function(module, exports) {
-
-	module.exports = [
-	
-	    '$document',
-	    '$window',
-	
-	    function($document, $window) {
-	
-	        return {
-	
-	            restrict: 'A',
-	
-	            link: function(scope, elem, attr) {
-	
-	                var content = $document[0].getElementById('content');
-	
-	                content.addEventListener('scroll', function() {
-	
-	                    if(content.scrollTop + content.offsetHeight >= content.scrollHeight) {
-	
-	                        scope.$apply(attr.appLoadUsers);
-	
-	                    }
-	                });
-	            }
-	        }
-	    }
-	];
-
-
-/***/ },
-/* 27 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var repos = angular.module('app.repos', []);
 	
-	repos.controller('RepoController', __webpack_require__(28));
-	repos.factory('appRepos', __webpack_require__(29));
+	repos.controller('RepoController', __webpack_require__(34));
+	repos.factory('appRepos', __webpack_require__(35));
 	
 	module.exports = repos;
 
 /***/ },
-/* 28 */
+/* 34 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -61118,20 +61310,28 @@
 	    function($scope, $state, $stateParams,  appRepos) {
 	
 	        var login = $stateParams.login,
+	            repo = $stateParams.repo;
 	
-	            name = $stateParams.repo;
-	
-	        appRepos.getRepo(login, name).then(function(repo) {
+	        appRepos.getRepo(login, repo).then(function(repo) {
 	
 	            $scope.repo = repo;
 	
 	        });
+	
+	        $scope.showCommits = function() {
+	
+	            $state.go('commits', {
+	                login: login,
+	                repo: repo
+	            });
+	
+	        }
 	    }
 	];
 
 
 /***/ },
-/* 29 */
+/* 35 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -61150,7 +61350,7 @@
 	                    .all([
 	
 	                        appGitHubApi.repos.single(login, name),
-	                        appGitHubApi.branches.all(login, name)
+	                        appGitHubApi.branches.all(login, name, 50)
 	
 	                    ])
 	
@@ -61158,11 +61358,35 @@
 	
 	                        var repo = res[0], branches = res[1];
 	
-	                        repo.branches = branches;
+	                        repo = {
+	                            name: repo.name,
+	                            description: repo.description
+	                        };
+	
+	                        repo.branches = branches.map(function(branch) {
+	
+	                            return {
+	                                name: branch.name
+	                            }
+	                        });
 	
 	                        return repo;
-	
 	                    });
+	            },
+	
+	            getRepos: function(login) {
+	
+	                return appGitHubApi.repos.all(login).then(function(repos){
+	
+	                    return repos.map(function(repo) {
+	
+	                        return {
+	                            name: repo.name,
+	                            description: repo.description,
+	                            language: repo.language
+	                        }
+	                    })
+	                });
 	            }
 	        }
 	    }
@@ -61170,13 +61394,103 @@
 
 
 /***/ },
-/* 30 */
+/* 36 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var commits = angular.module('app.commits', []);
+	
+	commits.factory('appCommits', __webpack_require__(37));
+	
+	commits.controller('CommitsController', __webpack_require__(38));
+	
+	module.exports = commits;
+
+
+/***/ },
+/* 37 */
+/***/ function(module, exports) {
+
+	module.exports = [
+	
+	    'appGitHubApi',
+	
+	    function(appGitHubApi) {
+	
+	        var currLogin, currRepo, isDone;
+	
+	        return {
+	
+	            commits: [],
+	
+	            init: function(login, repo) {
+	
+	                currLogin = login;
+	                currRepo = repo;
+	                isDone = false;
+	
+	                this.commits = [];
+	
+	                this.getCommits();
+	            },
+	
+	            getCommits: function() {
+	
+	                if(isDone) return;
+	
+	                var self = this;
+	
+	                appGitHubApi.commits.part(currLogin, currRepo).then(function(commits) {
+	
+	                    if(!commits) return isDone = true;
+	
+	                    commits.forEach(function(commit) {
+	
+	                        self.commits.push(commit);
+	
+	                    });
+	                })
+	            }
+	        }
+	    }
+	];
+
+/***/ },
+/* 38 */
+/***/ function(module, exports) {
+
+	module.exports = [
+	
+	    '$scope',
+	    '$state',
+	    '$stateParams',
+	    'appCommits',
+	
+	    function($scope, $state, $stateParams, appCommits) {
+	
+	        var login = $stateParams.login,
+	            repo = $stateParams.repo;
+	
+	        appCommits.init(login, repo);
+	
+	        $scope.commits = appCommits.commits;
+	
+	        $scope.loadMoreCommits = function() {
+	
+	            appCommits.getCommits();
+	
+	        }
+	    }
+	];
+
+
+/***/ },
+/* 39 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 	
 	// load the styles
-	var content = __webpack_require__(31);
+	var content = __webpack_require__(40);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
 	var update = __webpack_require__(14)(content, {});
@@ -61185,8 +61499,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!./../../node_modules/css-loader/index.js!./../../node_modules/stylus-loader/index.js!./style.styl", function() {
-				var newContent = require("!!./../../node_modules/css-loader/index.js!./../../node_modules/stylus-loader/index.js!./style.styl");
+			module.hot.accept("!!./../../node_modules/css-loader/index.js!./../../node_modules/autoprefixer-loader/index.js!./../../node_modules/stylus-loader/index.js!./style.styl", function() {
+				var newContent = require("!!./../../node_modules/css-loader/index.js!./../../node_modules/autoprefixer-loader/index.js!./../../node_modules/stylus-loader/index.js!./style.styl");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -61196,7 +61510,7 @@
 	}
 
 /***/ },
-/* 31 */
+/* 40 */
 /***/ function(module, exports, __webpack_require__) {
 
 	exports = module.exports = __webpack_require__(13)();
@@ -61204,13 +61518,13 @@
 	
 	
 	// module
-	exports.push([module.id, ".header-title-container {\n  text-align: center;\n}\n.page {\n  position: relative;\n  width: 100%;\n  padding: 20px 50px;\n}\n.page.ng-enter,\n.page.ng-leave {\n  transition: left 0.5s ease-in-out;\n}\n.page.ng-enter {\n  left: 100%;\n}\n.page.ng-enter-active {\n  left: 0;\n}\n.page.ng-leave {\n  left: -100%;\n}\n.page.ng-leave-active {\n  left: -200%;\n}\n.page .user-page .avatar {\n  width: 70%;\n}\n.page .user-page .login {\n  margin: 0;\n}\n.page .user-page .language {\n  margin: auto;\n}\n.page .repo-page .description {\n  text-align: center;\n}\n.page .lists-container>div {\n  margin-bottom: 20px;\n}\n.page .lists-container .md-toolbar {\n  padding: 0 16px;\n}\n", ""]);
+	exports.push([module.id, ".header-title-container {\n  text-align: center;\n}\n.page {\n  position: relative;\n  width: 100%;\n  padding: 20px 50px;\n}\n.page.ng-enter,\n.page.ng-leave {\n  -webkit-transition: all 0.5s ease-in-out;\n  transition: all 0.5s ease-in-out;\n}\n.page.ng-enter {\n  left: 100%;\n  opacity: 0;\n}\n.page.ng-enter-active {\n  left: 0;\n  opacity: 1;\n}\n.page.ng-leave {\n  left: -100%;\n  opacity: 1;\n}\n.page.ng-leave-active {\n  left: -200%;\n  opacity: 0;\n}\n.page .user-page .avatar {\n  width: 70%;\n}\n.page .user-page .login {\n  margin: 0;\n}\n.page .user-page .language {\n  margin: auto;\n}\n.page .repo-page .description {\n  text-align: center;\n}\n.page .lists-container {\n  position: relative;\n}\n.page .lists-container>div {\n  margin-bottom: 20px;\n}\n.page .lists-container .md-toolbar {\n  padding: 0 16px;\n}\n.page .lists-container .repos-list-container {\n  position: relative;\n  background-color: #fff;\n}\n.page .lists-container .repos-list-container.ng-enter {\n  opacity: 0;\n  -webkit-transition: opacity ease-in 0.5s;\n  transition: opacity ease-in 0.5s;\n}\n.page .lists-container .repos-list-container.ng-enter-active {\n  opacity: 1;\n}\n.loading {\n  position: absolute;\n  left: 50%;\n  margin: 50px 30px 0 -30px;\n  height: 60px;\n  width: 60px;\n  border: 2px solid rgba(0,0,0,0.2);\n  border-left-color: rgba(0,0,0,0.6);\n  border-radius: 30px;\n  opacity: 1;\n  -webkit-animation: animation-rotate 500ms linear infinite;\n          animation: animation-rotate 500ms linear infinite;\n}\n.loading.ng-leave {\n  -webkit-transition: opacity 0.3s ease-out;\n  transition: opacity 0.3s ease-out;\n}\n.loading.ng-leave.ng-leave-active {\n  opacity: 0;\n}\n@-webkit-keyframes animation-rotate {\n  100% {\n    -webkit-transform: rotate(360deg);\n            transform: rotate(360deg);\n  }\n}\n@keyframes animation-rotate {\n  100% {\n    -webkit-transform: rotate(360deg);\n            transform: rotate(360deg);\n  }\n}\n", ""]);
 	
 	// exports
 
 
 /***/ },
-/* 32 */
+/* 41 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -61264,9 +61578,25 @@
 	                    prevState: 'repo',
 	                    params: ['login', 'repo']
 	                }
-	            })
+	            });
+	    }
+	];
+
+
+/***/ },
+/* 42 */
+/***/ function(module, exports) {
+
+	module.exports = [
 	
+	    'appGitHubApiProvider',
 	
+	    function(appGitHubApiProvider) {
+	
+	        appGitHubApiProvider.setPagination({
+	            users: 20,
+	            commits: 5
+	        })
 	    }
 	];
 

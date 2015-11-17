@@ -1,0 +1,21 @@
+<div class="md-whiteframe-z3 commits-page">
+
+    <md-list app-partial-loading="loadMoreCommits()">
+
+        <md-list-item
+                class="md-3-line"
+                ng-repeat="commit in commits">
+
+            <img ng-src="{{::commit.author.avatar_url}}" class="md-avatar" alt="{{::commit.author.login}}" />
+
+            <div class="md-list-item-text">
+                <h3>{{::commit.commit.author.name}}</h3>
+                <h4>{{::commit.sha}}</h4>
+                <p>{{::commit.commit.message}}</p>
+            </div>
+
+            <md-divider></md-divider>
+
+        </md-list-item>
+    </md-list>
+</div>

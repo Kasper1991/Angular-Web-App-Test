@@ -1,9 +1,10 @@
-module.exports = [
+var partialLoading = angular.module('app.partialLoading', []);
+
+partialLoading.directive('appPartialLoading', [
 
     '$document',
-    '$window',
 
-    function($document, $window) {
+    function($document) {
 
         return {
 
@@ -13,15 +14,19 @@ module.exports = [
 
                 var content = $document[0].getElementById('content');
 
+                if(!content) throw Error('content element not found');
+
                 content.addEventListener('scroll', function() {
 
                     if(content.scrollTop + content.offsetHeight >= content.scrollHeight) {
 
-                        scope.$apply(attr.appLoadUsers);
+                        scope.$apply(attr.appPartialLoading);
 
                     }
                 });
             }
         }
     }
-];
+]);
+
+module.export = partialLoading;

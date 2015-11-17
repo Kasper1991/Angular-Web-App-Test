@@ -49,8 +49,6 @@ module.exports = [
                     prevState: 'repo',
                     params: ['login', 'repo']
                 }
-            })
-
-
+            });
     }
 ];

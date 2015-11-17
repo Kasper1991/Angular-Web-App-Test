@@ -3,8 +3,8 @@
     <div class="md-toolbar-tools" layout>
 
         <md-button
-                data-ng-show="prevState"
-                data-ng-click="goBack()"
+                data-ng-show="header.navigation.prev"
+                data-ng-click="header.goBack()"
                 class="md-icon-button">
 
             <ng-md-icon icon="arrow_back" aria-label="Back"></ng-md-icon>
@@ -13,7 +13,7 @@
 
         <div flex class="header-title-container">
 
-            <span ng-bind="title"></span>
+            <span ng-bind="header.title"></span>
 
         </div>
     </div>

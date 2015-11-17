@@ -4,8 +4,9 @@ module.exports = [
     '$state',
     '$stateParams',
     'appUsers',
+    'appRepos',
 
-    function($scope, $state, $stateParams, appUsers) {
+    function($scope, $state, $stateParams, appUsers, appRepos) {
 
         var login = $stateParams.login;
 
@@ -15,13 +16,17 @@ module.exports = [
 
         });
 
+        appRepos.getRepos(login).then(function(repos) {
+
+            $scope.repos = repos;
+
+        });
+
         $scope.showRepo = function(repo) {
 
             $state.go('repo', {
-
                 login: login,
                 repo: repo.name
-
             });
         };
     }

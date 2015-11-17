@@ -7,41 +7,39 @@ module.exports = [
 
         var service = {
 
-            users: [],
+                users: [],
 
-            getUsers: function() {
+                getUsers: function() {
 
-                var self = this;
+                    var self = this;
 
-                appGitHubApi.users.part(20).then(function(users) {
+                    appGitHubApi.users.part(50).then(function(users) {
 
-                    users.forEach(function(user){
+                        users.forEach(function(user){
 
-                        self.users.push(user);
+                            self.users.push({
+                                login: user.login,
+                                avatar_url: user.avatar_url
+                            });
+                        });
+                    })
+                },
 
-                    });
-                })
-            },
+                getUser: function(login) {
 
-            getUser: function(login) {
+                    return appGitHubApi.users.single(login).then(function(user) {
 
-                return $q
-
-                    .all([
-
-                        appGitHubApi.users.single(login),
-                        appGitHubApi.repos.all(login)
-
-                    ]).then(function(res) {
-
-                        var user = res[0], repos = res[1];
-
-                        user.repos = repos;
-
-                        return user;
-                    });
-            }
-        };
+                        return {
+                            avatar_url: user.avatar_url,
+                            login: user.login,
+                            name: user.name,
+                            location: user.location,
+                            email: user.email,
+                            blog: user.blog
+                        }
+                    })
+                }
+            };
 
         service.getUsers();
 
